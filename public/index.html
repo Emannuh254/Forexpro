@@ -205,6 +205,31 @@
       cursor: pointer;
     }
     
+    .password-requirements {
+      font-size: 0.85rem;
+      color: var(--gray);
+      margin-top: 8px;
+    }
+    
+    .requirement {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    
+    .requirement i {
+      margin-right: 6px;
+      font-size: 0.8rem;
+    }
+    
+    .requirement.valid {
+      color: var(--success);
+    }
+    
+    .requirement.invalid {
+      color: var(--error);
+    }
+    
     .checkbox-group {
       display: flex;
       align-items: center;
@@ -439,7 +464,21 @@
                 <button type="button" class="password-toggle" data-target="signupPassword">
                   <i class="fas fa-eye-slash"></i>
                 </button>
-                <span class="error-message">Password must be at least 8 characters</span>
+                <span class="error-message">Password does not meet requirements</span>
+              </div>
+              <div class="password-requirements">
+                <div id="lengthReq" class="requirement invalid">
+                  <i class="fas fa-times-circle"></i>
+                  <span>At least 8 characters</span>
+                </div>
+                <div id="uppercaseReq" class="requirement invalid">
+                  <i class="fas fa-times-circle"></i>
+                  <span>One uppercase letter</span>
+                </div>
+                <div id="numberReq" class="requirement invalid">
+                  <i class="fas fa-times-circle"></i>
+                  <span>One number</span>
+                </div>
               </div>
             </div>
             
@@ -486,6 +525,11 @@
       const loginForm = document.getElementById('loginForm');
       const signupForm = document.getElementById('signupForm');
       const toast = document.getElementById('toast');
+      const signupPassword = document.getElementById('signupPassword');
+      const confirmPassword = document.getElementById('confirmPassword');
+      const lengthReq = document.getElementById('lengthReq');
+      const uppercaseReq = document.getElementById('uppercaseReq');
+      const numberReq = document.getElementById('numberReq');
       
       // Tab Switching
       loginTab.addEventListener('click', function() {
@@ -520,6 +564,51 @@
           }
         });
       });
+      
+      // Password Requirements Validation
+      function validatePasswordRequirements(password) {
+        // Length requirement
+        if (password.length >= 8) {
+          lengthReq.classList.remove('invalid');
+          lengthReq.classList.add('valid');
+          lengthReq.querySelector('i').classList.remove('fa-times-circle');
+          lengthReq.querySelector('i').classList.add('fa-check-circle');
+        } else {
+          lengthReq.classList.remove('valid');
+          lengthReq.classList.add('invalid');
+          lengthReq.querySelector('i').classList.remove('fa-check-circle');
+          lengthReq.querySelector('i').classList.add('fa-times-circle');
+        }
+        
+        // Uppercase requirement
+        if (/[A-Z]/.test(password)) {
+          uppercaseReq.classList.remove('invalid');
+          uppercaseReq.classList.add('valid');
+          uppercaseReq.querySelector('i').classList.remove('fa-times-circle');
+          uppercaseReq.querySelector('i').classList.add('fa-check-circle');
+        } else {
+          uppercaseReq.classList.remove('valid');
+          uppercaseReq.classList.add('invalid');
+          uppercaseReq.querySelector('i').classList.remove('fa-check-circle');
+          uppercaseReq.querySelector('i').classList.add('fa-times-circle');
+        }
+        
+        // Number requirement
+        if (/[0-9]/.test(password)) {
+          numberReq.classList.remove('invalid');
+          numberReq.classList.add('valid');
+          numberReq.querySelector('i').classList.remove('fa-times-circle');
+          numberReq.querySelector('i').classList.add('fa-check-circle');
+        } else {
+          numberReq.classList.remove('valid');
+          numberReq.classList.add('invalid');
+          numberReq.querySelector('i').classList.remove('fa-check-circle');
+          numberReq.querySelector('i').classList.add('fa-times-circle');
+        }
+        
+        // Return true if all requirements are met
+        return password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+      }
       
       // Form Validation
       function validateEmail(email) {
@@ -621,7 +710,7 @@
         
         const email = document.getElementById('signupEmail').value;
         const password = document.getElementById('signupPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
+        const confirmPass = document.getElementById('confirmPassword').value;
         const agreeTerms = document.getElementById('agreeTerms').checked;
         const submitBtn = this.querySelector('button[type="submit"]');
         const btnText = submitBtn.querySelector('span');
@@ -630,7 +719,7 @@
         // Validate form
         let isValid = true;
         isValid = validateField(document.getElementById('signupEmail'), validateEmail, 'Please enter a valid email') && isValid;
-        isValid = validateField(document.getElementById('signupPassword'), val => val.length >= 8, 'Password must be at least 8 characters') && isValid;
+        isValid = validateField(document.getElementById('signupPassword'), val => validatePasswordRequirements(val), 'Password does not meet requirements') && isValid;
         isValid = validateField(document.getElementById('confirmPassword'), val => val === password, 'Passwords do not match') && isValid;
         
         if (!agreeTerms) {
@@ -682,6 +771,23 @@
         document.querySelectorAll('.input-group').forEach(group => {
           group.classList.remove('error');
         });
+        
+        // Reset password requirements
+        lengthReq.classList.remove('valid');
+        lengthReq.classList.add('invalid');
+        lengthReq.querySelector('i').classList.remove('fa-check-circle');
+        lengthReq.querySelector('i').classList.add('fa-times-circle');
+        
+        uppercaseReq.classList.remove('valid');
+        uppercaseReq.classList.add('invalid');
+        uppercaseReq.querySelector('i').classList.remove('fa-check-circle');
+        uppercaseReq.querySelector('i').classList.add('fa-times-circle');
+        
+        numberReq.classList.remove('valid');
+        numberReq.classList.add('invalid');
+        numberReq.querySelector('i').classList.remove('fa-check-circle');
+        numberReq.querySelector('i').classList.add('fa-times-circle');
+        
         showToast('Form cleared', 'success');
       });
       
@@ -694,8 +800,13 @@
         validateField(this, validateEmail, 'Please enter a valid email');
       });
       
-      document.getElementById('confirmPassword').addEventListener('input', function() {
-        validateField(this, val => val === document.getElementById('signupPassword').value, 'Passwords do not match');
+      // Password requirements real-time validation
+      signupPassword.addEventListener('input', function() {
+        validatePasswordRequirements(this.value);
+      });
+      
+      confirmPassword.addEventListener('input', function() {
+        validateField(this, val => val === signupPassword.value, 'Passwords do not match');
       });
     });
   </script>
