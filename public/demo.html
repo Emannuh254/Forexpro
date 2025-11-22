@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForexPro - Demo Mode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+            min-height: 100dvh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+        }
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+        .profit-glow { text-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        .bot-img {
+            height: 140px; object-fit: cover; border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+        .progress-bar { height: 10px; background: rgba(255, 255, 255, 0.15); border-radius: 999px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 999px; transition: width 1.5s ease; }
+        .demo-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .clickable { cursor: pointer; }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .notification.success { background-color: #3b82f6; }
+        .notification.error { background-color: #ef4444; }
+        .speed-control {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 100;
+        }
+        .speed-control button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .speed-control button.active {
+            background: #1d4ed8;
+        }
+        .trade-panel {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .trade-button {
+            transition: all 0.2s ease;
+            transform: scale(1);
+        }
+        .trade-button:active {
+            transform: scale(0.95);
+        }
+        .price-up {
+            color: #10b981;
+        }
+        .price-down {
+            color: #ef4444;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .guide-step {
+            border-left: 3px solid #3b82f6;
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .guide-step h3 {
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+        }
+        .trade-history-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 0;
+        }
+        .trade-history-item:last-child {
+            border-bottom: none;
+        }
+        .trade-history-item .profit {
+            font-weight: bold;
+        }
+        .trade-history-item .profit.positive {
+            color: #10b981;
+        }
+        .trade-history-item .profit.negative {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="gradient-bg text-white min-h-screen">
+
+    <!-- Top Navbar -->
+    <nav class="glass-card shadow-2xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-chart-line text-2xl text-blue-400"></i>
+                    <span class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-white bg-clip-text text-transparent">ForexPro</span>
+                    <span class="demo-badge">DEMO MODE</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="dashboard.html" class="hover:text-blue-300 transition">Dashboard</a>
+                    <a href="trading.html" class="text-blue-400 font-bold border-b-2 border-blue-400 pb-1">Trading</a>
+                    <a href="deposit-withdraw.html" class="hover:text-blue-300 transition">Wallet</a>
+                    <a href="referrals.html" class="hover:text-blue-300 transition">Referrals</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="guideBtn" class="bg-gradient-to-r from-purple-600 to-purple-800 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-question-circle mr-2"></i> Guide
+                    </button>
+                    <button id="exitDemoBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Exit Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- Welcome message -->
+        <div class="text-center md:text-left">
+            <h1 class="text-4xl md:text-5xl font-bold">Welcome to Demo Mode!</h1>
+            <p class="text-gray-300 mt-2 text-lg">Experience the power of ForexPro with free demo credits</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+            <div class="glass-card p-6 hover-lift text-center clickable">
+                <i class="fas fa-wallet text-3xl text-blue-400 mb-3"></i>
+                <p class="text-gray-300 text-sm">Demo Balance</p>
+                <p class="text-3xl font-bold" id="totalBalance">KSH 10,000</p>
+            </div>
+            <div class="glass-card p-6 hover-lift text-center profit-glow clickable">
+                <i class="fas fa-arrow-trend-up text-3xl text-blue-400 mb-3"></i>
+                <p class="text-gray-300 text-sm">Total Profit</p>
+                <p class="text-3xl font-bold" id="totalProfit">KSH 0</p>
+            </div>
+            <div class="glass-card p-6 hover-lift text-center clickable">
+                <i class="fas fa-robot text-3xl text-blue-400 mb-3"></i>
+                <p class="text-gray-300 text-sm">Active Bots</p>
+                <p class="text-3xl font-bold" id="activeBots">0</p>
+            </div>
+            <div class="glass-card p-6 hover-lift text-center clickable">
+                <i class="fas fa-clock text-3xl text-blue-400 mb-3"></i>
+                <p class="text-gray-300 text-sm">Time Speed</p>
+                <p class="text-3xl font-bold" id="timeSpeed">1x</p>
+            </div>
+        </div>
+
+        <!-- Trading Section -->
+        <div class="glass-card p-6 md:p-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold">Live Trading Simulator</h2>
+                    <p class="text-gray-300">Experience real-time trading with virtual funds</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="depositBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-plus mr-2"></i> Deposit
+                    </button>
+                    <button id="withdrawBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-minus mr-2"></i> Withdraw
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Chart Section -->
+                <div class="lg:col-span-2">
+                    <div class="glass-card p-4 mb-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold">EUR/USD</h3>
+                                <p class="text-lg" id="currentPrice">1.08542</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-400">24h Change</p>
+                                <p class="price-up" id="priceChange">+0.00234 (+0.22%)</p>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="priceChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Trade History -->
+                    <div class="glass-card p-4">
+                        <h3 class="text-xl font-bold mb-4">Trade History</h3>
+                        <div id="tradeHistory" class="max-h-60 overflow-y-auto">
+                            <div class="text-center py-4 text-gray-400">
+                                <p>No trades yet. Start trading to see your history.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Trading Panel -->
+                <div class="trade-panel">
+                    <h3 class="text-xl font-bold mb-4">Place Trade</h3>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Trade Amount (KSH)</label>
+                        <input type="number" id="tradeAmount" class="w-full bg-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter amount" min="100" value="1000">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Leverage</label>
+                        <select id="leverage" class="w-full bg-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="1">1:1</option>
+                            <option value="5">1:5</option>
+                            <option value="10" selected>1:10</option>
+                            <option value="25">1:25</option>
+                            <option value="50">1:50</option>
+                            <option value="100">1:100</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-2">Trade Type</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button id="buyBtn" class="trade-button bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold">
+                                <i class="fas fa-arrow-up mr-2"></i> Buy
+                            </button>
+                            <button id="sellBtn" class="trade-button bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold">
+                                <i class="fas fa-arrow-down mr-2"></i> Sell
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white/10 rounded-lg p-4 mb-4">
+                        <h4 class="font-bold mb-2">Market Summary</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Market Cap:</span>
+                                <span>$2.4T</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Volume (24h):</span>
+                                <span>$145.8B</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Volatility:</span>
+                                <span class="text-yellow-400">Medium</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-xs text-gray-400 text-center">
+                        <p>Trading in demo mode uses virtual funds only</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Bots -->
+        <div class="glass-card p-6 md:p-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold">Your Trading Bots</h2>
+                    <p class="text-gray-300">Automated profits running 24/7</p>
+                </div>
+                <button id="addBotBtn" class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-3 rounded-full font-bold hover:scale-105 transition">
+                    <i class="fas fa-plus mr-2"></i> Add Bot
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="bots-container">
+                <!-- Bots will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Investment Plans -->
+        <div class="glass-card p-6 md:p-8">
+            <h2 class="text-2xl font-bold mb-6 text-center md:text-left">Choose Your Investment Plan</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Starter</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 1,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 75</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 2,250</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="1000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Basic</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 2,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 150</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 4,500</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="2000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Standard</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 4,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 300</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 9,000</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="4000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Advanced</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 6,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 450</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 13,500</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="6000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Premium</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 8,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 600</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 18,000</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="8000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Gold</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 16,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 1,200</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 36,000</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="16000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Platinum</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 20,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 1,500</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 45,000</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="20000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">Diamond</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 30,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 2,250</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 67,500</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="30000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-4 hover-lift border border-white/20">
+                    <h3 class="text-lg font-bold">VIP</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 50,000</p>
+                    <p class="text-blue-400 text-sm">Daily: <strong>KSH 3,750</strong></p>
+                    <p class="text-xs text-gray-300 mt-2">Total: <strong>KSH 112,500</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-blue-600 py-2 rounded-lg font-bold hover:bg-blue-700 transition" data-price="50000">
+                        Invest
+                    </button>
+                </div>
+                <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-4 hover-lift relative overflow-hidden transform scale-105">
+                    <div class="absolute top-0 right-0 bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">BEST VALUE</div>
+                    <h3 class="text-lg font-bold">Elite</h3>
+                    <p class="text-2xl font-bold mt-2">KSH 100,000</p>
+                    <p class="text-white text-sm">Daily: <strong>KSH 7,500</strong></p>
+                    <p class="text-xs mt-2">Total: <strong>KSH 225,000</strong></p>
+                    <button class="invest-btn mt-3 w-full bg-white text-black py-2 rounded-lg font-bold hover:bg-gray-200 transition" data-price="100000">
+                        Invest
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="glass-card p-6 md:p-8">
+            <h2 class="text-2xl font-bold mb-6">How Demo Mode Works</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl font-bold text-blue-400">1</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Start with Demo Credits</h3>
+                    <p class="text-gray-300">You begin with KSH 10,000 in demo credits to experience the platform.</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl font-bold text-blue-400">2</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Invest in Trading Bots</h3>
+                    <p class="text-gray-300">Choose from various investment plans and watch your bots work for you.</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl font-bold text-blue-400">3</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Watch Your Profits Grow</h3>
+                    <p class="text-gray-300">Experience accelerated time to see how your investments would grow in real-time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speed Control -->
+    <div class="speed-control">
+        <p class="text-sm mb-2">Time Speed:</p>
+        <div>
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="5">5x</button>
+            <button class="speed-btn" data-speed="10">10x</button>
+            <button class="speed-btn" data-speed="50">50x</button>
+        </div>
+    </div>
+
+    <!-- Deposit/Withdraw Modal -->
+    <div id="transactionModal" class="modal">
+        <div class="glass-card p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold mb-4" id="modalTitle">Deposit Funds</h3>
+            <p class="text-gray-300 mb-6" id="modalDescription">Add funds to your demo account</p>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium mb-2">Amount (KSH)</label>
+                <input type="number" id="transactionAmount" class="w-full bg-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter amount" min="100">
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button id="confirmTransaction" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                    Confirm
+                </button>
+                <button id="cancelTransaction" class="flex-1 bg-gray-600 py-3 rounded-xl font-bold hover:bg-gray-700 transition">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guide Modal -->
+    <div id="guideModal" class="modal">
+        <div class="glass-card p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-6">Demo Mode Guide</h3>
+            
+            <div class="space-y-6">
+                <div class="guide-step">
+                    <h3>Getting Started</h3>
+                    <p>Welcome to ForexPro Demo Mode! You start with KSH 10,000 in virtual funds to explore all features without any risk.</p>
+                </div>
+                
+                <div class="guide-step">
+                    <h3>Trading Simulator</h3>
+                    <p>Experience real-time trading with our interactive chart. Place buy/sell orders with virtual funds and see how your trades perform in real-time.</p>
+                </div>
+                
+                <div class="guide-step">
+                    <h3>Trading Bots</h3>
+                    <p>Invest in automated trading bots that work for you 24/7. Choose from various investment plans and watch your profits grow with accelerated time.</p>
+                </div>
+                
+                <div class="guide-step">
+                    <h3>Time Control</h3>
+                    <p>Use the time speed controls (1x, 5x, 10x, 50x) to accelerate your experience. See how your investments would perform over days or weeks in just minutes.</p>
+                </div>
+                
+                <div class="guide-step">
+                    <h3>Deposit & Withdraw</h3>
+                    <p>Practice depositing and withdrawing funds. All transactions are virtual and help you understand how the real platform works.</p>
+                </div>
+                
+                <div class="guide-step">
+                    <h3>Ready for Real Trading?</h3>
+                    <p>When you're comfortable with the platform, exit demo mode and create a real account to start trading with real funds.</p>
+                </div>
+            </div>
+            
+            <button id="closeGuide" class="mt-8 w-full bg-blue-600 py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                Got it!
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <script src="js/demo.js"></script>
+</body>
+</html>

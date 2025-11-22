@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'">
   <title>ForexPro - Sign In / Sign Up</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
@@ -35,15 +36,12 @@
       color: var(--light);
       min-height: 100vh;
       display: flex;
-      /* On mobile/tiny screens keep content starting at top so the page itself can scroll
-         On larger screens we'll re-center via media query below */
       align-items: flex-start;
       justify-content: center;
       padding: 20px;
-      /* Allow vertical scrolling of the page; keep horizontal hidden */
       overflow-x: hidden;
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+      -webkit-overflow-scrolling: touch;
     }
     
     .container {
@@ -54,10 +52,7 @@
       border-radius: 24px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
       border: 1px solid rgba(255, 255, 255, 0.1);
-    /* Allow overflowing content to be visible so the page (body) can scroll.
-      If you prefer the container itself to scroll when tall, change this to
-      `overflow-y: auto; max-height: calc(100vh - 40px);` */
-    overflow: visible;
+      overflow: visible;
       display: grid;
       grid-template-columns: 1fr;
     }
@@ -285,6 +280,36 @@
       background: rgba(255, 255, 255, 0.15);
     }
     
+    .btn-demo {
+      background: linear-gradient(135deg, var(--warning), #d97706);
+      color: white;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+      width: 100%;
+      margin-top: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn-demo:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+    }
+    
+    .btn-demo::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .btn-demo:hover::before {
+      left: 100%;
+    }
+    
     .btn-group {
       display: flex;
       gap: 12px;
@@ -354,7 +379,6 @@
       .container {
         grid-template-columns: 1fr 1fr;
       }
-      /* Re-enable vertical centering on larger screens */
       body {
         align-items: center;
       }
@@ -453,6 +477,11 @@
             <div style="text-align: center; margin-top: 16px;">
               <a href="#" style="color: var(--primary); font-size: 0.9rem;">Forgot password?</a>
             </div>
+            
+            <!-- Demo Mode Button -->
+            <button type="button" id="demoModeBtn" class="btn btn-demo">
+              <i class="fas fa-play mr-2"></i> Try Demo Mode
+            </button>
           </form>
         </div>
         
@@ -519,6 +548,11 @@
               </button>
               <button type="button" id="resetForm" class="btn btn-secondary">Clear</button>
             </div>
+            
+            <!-- Demo Mode Button -->
+            <button type="button" id="demoModeBtnSignup" class="btn btn-demo">
+              <i class="fas fa-play mr-2"></i> Try Demo Mode
+            </button>
           </form>
         </div>
       </div>
@@ -542,6 +576,8 @@
       const lengthReq = document.getElementById('lengthReq');
       const uppercaseReq = document.getElementById('uppercaseReq');
       const numberReq = document.getElementById('numberReq');
+      const demoModeBtn = document.getElementById('demoModeBtn');
+      const demoModeBtnSignup = document.getElementById('demoModeBtnSignup');
       
       // Tab Switching
       loginTab.addEventListener('click', function() {
@@ -658,6 +694,32 @@
           toast.classList.remove('error', 'success');
         }, 3000);
       }
+      
+      // Demo Mode Button - Improved functionality
+      function activateDemoMode() {
+        // Store demo mode flag in localStorage
+        localStorage.setItem('demoMode', 'true');
+        
+        // Show notification
+        showToast('Entering Demo Mode...', 'success');
+        
+        // Add a slight delay before redirecting to allow the notification to show
+        setTimeout(() => {
+          // Redirect to demo page
+          window.location.href = 'demo.html';
+        }, 800);
+      }
+      
+      // Demo Mode Button Event Listeners
+      demoModeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        activateDemoMode();
+      });
+      
+      demoModeBtnSignup.addEventListener('click', function(e) {
+        e.preventDefault();
+        activateDemoMode();
+      });
       
       // Login Form Submission
       loginForm.addEventListener('submit', async function(e) {

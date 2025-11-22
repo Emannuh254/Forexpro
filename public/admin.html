@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForexPro - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+            min-height: 100dvh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+        }
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+        .btn-primary {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4);
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .notification.success { background-color: #3b82f6; }
+        .notification.error { background-color: #ef4444; }
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-pending {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+        .status-completed {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        .status-failed {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="gradient-bg text-white min-h-screen">
+
+    <!-- Login Form -->
+    <div id="loginForm" class="login-container glass-card p-8">
+        <div class="text-center mb-8">
+            <i class="fas fa-user-shield text-5xl text-blue-400"></i>
+            <h1 class="text-3xl font-bold mt-4">Admin Panel</h1>
+            <p class="text-gray-300">Login to access the admin dashboard</p>
+        </div>
+        
+        <form id="adminLoginForm" class="space-y-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                <input type="text" id="username" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white" placeholder="admin" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                <input type="password" id="password" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white" placeholder="•••••••••" required>
+            </div>
+            <div>
+                <button type="submit" class="btn-primary w-full py-3 rounded-md text-white font-medium">
+                    Login
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="hidden">
+        <!-- Navigation -->
+        <nav class="glass-card shadow-2xl sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-user-shield text-2xl text-blue-400"></i>
+                        <span class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-white bg-clip-text text-transparent">ForexPro Admin</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                <div class="glass-card p-6 hover-lift text-center">
+                    <i class="fas fa-users text-3xl text-blue-400 mb-3"></i>
+                    <p class="text-gray-300 text-sm">Total Users</p>
+                    <p class="text-3xl font-bold" id="totalUsers">0</p>
+                </div>
+                <div class="glass-card p-6 hover-lift text-center">
+                    <i class="fas fa-exchange-alt text-3xl text-blue-400 mb-3"></i>
+                    <p class="text-gray-300 text-sm">Total Transactions</p>
+                    <p class="text-3xl font-bold" id="totalTransactions">0</p>
+                </div>
+                <div class="glass-card p-6 hover-lift text-center">
+                    <i class="fas fa-clock text-3xl text-blue-400 mb-3"></i>
+                    <p class="text-gray-300 text-sm">Pending Transactions</p>
+                    <p class="text-3xl font-bold" id="pendingTransactions">0</p>
+                </div>
+                <div class="glass-card p-6 hover-lift text-center">
+                    <i class="fas fa-wallet text-3xl text-blue-400 mb-3"></i>
+                    <p class="text-gray-300 text-sm">Total Volume</p>
+                    <p class="text-3xl font-bold" id="totalVolume">$0</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-card p-6 hover-lift">
+                <h2 class="text-2xl font-bold mb-6">Quick Actions</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button id="depositToUserBtn" class="bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-center transition">
+                        <i class="fas fa-hand-holding-usd text-2xl mb-2"></i>
+                        <h3 class="font-bold">Deposit to User</h3>
+                        <p class="text-sm text-gray-300">Add funds to any user account</p>
+                    </button>
+                    <button id="refreshDataBtn" class="bg-green-600 hover:bg-green-700 p-4 rounded-lg text-center transition">
+                        <i class="fas fa-sync-alt text-2xl mb-2"></i>
+                        <h3 class="font-bold">Refresh Data</h3>
+                        <p class="text-sm text-gray-300">Update all statistics</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Transactions Management -->
+            <div class="glass-card p-6 hover-lift">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Transactions Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="filter-btn bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition" data-filter="all">
+                            All
+                        </button>
+                        <button class="filter-btn bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition" data-filter="pending">
+                            Pending
+                        </button>
+                        <button class="filter-btn bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition" data-filter="completed">
+                            Completed
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-white/10">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    ID
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    User
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Type
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Amount
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Date
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/10" id="transactionsTable">
+                            <!-- Transactions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Management -->
+            <div class="glass-card p-6 hover-lift">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Users Management</h2>
+                    <div class="flex space-x-2">
+                        <input type="text" id="userSearch" placeholder="Search users..." class="bg-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                        <button id="searchUserBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-white/10">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    ID
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Name
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Email
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Balance
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Referrals
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/10" id="usersTable">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deposit to User Modal -->
+    <div id="depositModal" class="modal">
+        <div class="glass-card p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold mb-4">Deposit to User</h3>
+            <form id="depositForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Select User</label>
+                    <select id="userSelect" class="w-full bg-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                        <option value="">Select a user</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Amount (KSH)</label>
+                    <input type="number" id="depositAmount" class="w-full bg-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="1000" min="100" step="100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Note (Optional)</label>
+                    <textarea id="depositNote" class="w-full bg-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" rows="3" placeholder="Add a note for this transaction"></textarea>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold transition">
+                        Deposit
+                    </button>
+                    <button type="button" id="cancelDeposit" class="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded-xl font-bold transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // API Base URL
+        const API_BASE = 'https://fly-io-haha.onrender.com/api';
+        
+        // Check if admin is logged in
+        let adminToken = localStorage.getItem('adminToken');
+        
+        // DOM Elements
+        const loginForm = document.getElementById('loginForm');
+        const adminDashboard = document.getElementById('adminDashboard');
+        const adminLoginForm = document.getElementById('adminLoginForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const depositModal = document.getElementById('depositModal');
+        const depositForm = document.getElementById('depositForm');
+        const cancelDeposit = document.getElementById('cancelDeposit');
+        const depositToUserBtn = document.getElementById('depositToUserBtn');
+        const refreshDataBtn = document.getElementById('refreshDataBtn');
+        const searchUserBtn = document.getElementById('searchUserBtn');
+        const userSearch = document.getElementById('userSearch');
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Admin login
+        adminLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    adminToken = data.token;
+                    localStorage.setItem('adminToken', adminToken);
+                    loginForm.classList.add('hidden');
+                    adminDashboard.classList.remove('hidden');
+                    loadDashboardData();
+                    showNotification('Login successful!', 'success');
+                } else {
+                    showNotification(data.message || 'Login failed', 'error');
+                }
+            } catch (err) {
+                showNotification('Network error. Please try again.', 'error');
+            }
+        });
+        
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('adminToken');
+            adminToken = null;
+            adminDashboard.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            showNotification('Logged out successfully', 'success');
+        });
+        
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load stats
+                const usersResponse = await fetch(`${API_BASE}/admin/users`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const usersData = await usersResponse.json();
+                document.getElementById('totalUsers').textContent = usersData.length;
+                
+                const transactionsResponse = await fetch(`${API_BASE}/admin/transactions`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const transactionsData = await transactionsResponse.json();
+                document.getElementById('totalTransactions').textContent = transactionsData.length;
+                
+                const pendingTransactions = transactionsData.filter(t => t.status === 'pending');
+                document.getElementById('pendingTransactions').textContent = pendingTransactions.length;
+                
+                const totalVolume = transactionsData.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                document.getElementById('totalVolume').textContent = `$${totalVolume.toFixed(2)}`;
+                
+                // Load transactions table
+                loadTransactionsTable(transactionsData);
+                
+                // Load users table
+                loadUsersTable(usersData);
+                
+                // Load user select for deposit
+                loadUserSelect(usersData);
+            } catch (err) {
+                showNotification('Failed to load dashboard data', 'error');
+            }
+        }
+        
+        // Load transactions table
+        function loadTransactionsTable(transactions) {
+            const tbody = document.getElementById('transactionsTable');
+            tbody.innerHTML = '';
+            
+            transactions.forEach(transaction => {
+                const statusClass = transaction.status === 'completed' ? 'status-completed' : 
+                                      transaction.status === 'pending' ? 'status-pending' : 'status-failed';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        ${transaction.id}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium">${transaction.user_name}</div>
+                        <div class="text-xs text-gray-400">${transaction.user_email}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        ${transaction.type}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        ${transaction.currency === 'KSH' ? 'KSH' : '$'}${parseFloat(transaction.amount).toLocaleString()}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge ${statusClass}">${transaction.status}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        ${new Date(transaction.created_at).toLocaleDateString()}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        ${transaction.status === 'pending' ? 
+                            `<button class="text-green-400 hover:text-green-300 complete-transaction" data-id="${transaction.id}">Complete</button>` : 
+                            '-'}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Add event listeners to complete buttons
+            document.querySelectorAll('.complete-transaction').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const transactionId = this.getAttribute('data-id');
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/transactions/${transactionId}`, {
+                            method: 'PUT',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${adminToken}`
+                            },
+                            body: JSON.stringify({ status: 'completed' })
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok) {
+                            showNotification('Transaction completed successfully!', 'success');
+                            loadDashboardData();
+                        } else {
+                            showNotification(data.message || 'Failed to complete transaction', 'error');
+                        }
+                    } catch (err) {
+                        showNotification('Network error. Please try again.', 'error');
+                    }
+                });
+            });
+        }
+        
+        // Load users table
+        function loadUsersTable(users) {
+            const tbody = document.getElementById('usersTable');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        ${user.id}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        ${user.name}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        ${user.email}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        $${parseFloat(user.balance || 0).toFixed(2)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        ${user.referrals || 0}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button class="text-blue-400 hover:text-blue-300 deposit-to-user" data-id="${user.id}" data-name="${user.name}">
+                            Deposit
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Add event listeners to deposit buttons
+            document.querySelectorAll('.deposit-to-user').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-id');
+                    const userName = this.getAttribute('data-name');
+                    
+                    // Open deposit modal with pre-selected user
+                    document.getElementById('userSelect').value = userId;
+                    depositModal.classList.add('show');
+                });
+            });
+        }
+        
+        // Load user select for deposit modal
+        function loadUserSelect(users) {
+            const userSelect = document.getElementById('userSelect');
+            userSelect.innerHTML = '<option value="">Select a user</option>';
+            
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.name} (${user.email})`;
+                userSelect.appendChild(option);
+            });
+        }
+        
+        // Deposit modal functionality
+        depositToUserBtn.addEventListener('click', () => {
+            depositModal.classList.add('show');
+        });
+        
+        cancelDeposit.addEventListener('click', () => {
+            depositModal.classList.remove('show');
+            depositForm.reset();
+        });
+        
+        depositForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('userSelect').value;
+            const amount = document.getElementById('depositAmount').value;
+            const note = document.getElementById('depositNote').value;
+            
+            if (!userId || !amount) {
+                showNotification('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/admin/deposit`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({ 
+                        user_id: userId, 
+                        amount: amount,
+                        currency: 'KSH',
+                        note: note
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification('Deposit successful!', 'success');
+                    depositModal.classList.remove('show');
+                    depositForm.reset();
+                    loadDashboardData();
+                } else {
+                    showNotification(data.message || 'Failed to process deposit', 'error');
+                }
+            } catch (err) {
+                showNotification('Network error. Please try again.', 'error');
+            }
+        });
+        
+        // Refresh data button
+        refreshDataBtn.addEventListener('click', () => {
+            loadDashboardData();
+            showNotification('Data refreshed successfully!', 'success');
+        });
+        
+        // Search users functionality
+        searchUserBtn.addEventListener('click', async () => {
+            const searchTerm = userSearch.value.trim();
+            
+            if (!searchTerm) {
+                loadDashboardData();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/admin/users/search?term=${searchTerm}`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                if (response.ok) {
+                    const usersData = await response.json();
+                    loadUsersTable(usersData);
+                } else {
+                    showNotification('Failed to search users', 'error');
+                }
+            } catch (err) {
+                showNotification('Network error. Please try again.', 'error');
+            }
+        });
+        
+        // Filter transactions
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                // Update active button style
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    b.classList.add('bg-white/10', 'hover:bg-white/20');
+                });
+                this.classList.remove('bg-white/10', 'hover:bg-white/20');
+                this.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                
+                // Filter transactions
+                const filter = this.getAttribute('data-filter');
+                
+                try {
+                    const response = await fetch(`${API_BASE}/admin/transactions?filter=${filter}`, {
+                        headers: { 'Authorization': `Bearer ${adminToken}` }
+                    });
+                    
+                    if (response.ok) {
+                        const transactionsData = await response.json();
+                        loadTransactionsTable(transactionsData);
+                    } else {
+                        showNotification('Failed to filter transactions', 'error');
+                    }
+                } catch (err) {
+                    showNotification('Network error. Please try again.', 'error');
+                }
+            });
+        });
+        
+        // Check if already logged in
+        if (adminToken) {
+            loginForm.classList.add('hidden');
+            adminDashboard.classList.remove('hidden');
+            loadDashboardData();
+        }
+    </script>
+</body>
+</html>

@@ -48,6 +48,84 @@
         }
         .notification.success { background-color: #3b82f6; }
         .notification.error { background-color: #ef4444; }
+        .user-avatar {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .user-avatar:hover { transform: scale(1.05); }
+        .user-avatar img {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .user-avatar .default-avatar {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-avatar .default-avatar i {
+            font-size: 48px;
+            color: #3b82f6;
+        }
+        .upload-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .user-avatar:hover .upload-overlay { opacity: 1; }
+        .vip-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 20px;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .vip-gold {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        .vip-platinum {
+            background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+            color: #1f2937;
+        }
+        .vip-diamond {
+            background: linear-gradient(135deg, #b9f6ca, #34d399);
+            color: #064e3b;
+        }
+        .vip-elite {
+            background: linear-gradient(135deg, #818cf8, #4f46e5);
+            color: white;
+        }
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body class="gradient-bg text-white min-h-screen">
@@ -65,11 +143,14 @@
                     <a href="trading.html" class="hover:text-blue-300 transition">Trading</a>
                     <a href="deposit-withdraw.html" class="hover:text-blue-300 transition">Wallet</a>
                     <a href="referrals.html" class="hover:text-blue-300 transition">Referrals</a>
+                    <a href="profile.html" class="text-blue-400 font-bold border-b-2 border-blue-400 pb-1">Profile</a>
                 </div>
                 <div class="flex items-center space-x-4">
                     <button class="p-2 hover:bg-white/10 rounded-full transition"><i class="fas fa-bell"></i></button>
-                    <div class="user-avatar">
-                        <img id="userImage" src="" alt="You" class="w-10 h-10 rounded-full ring-2 ring-blue-400">
+                    <div class="user-avatar" id="userAvatar">
+                        <div id="userImageContainer"></div>
+                        <div class="upload-overlay"><i class="fas fa-camera text-white"></i></div>
+                        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
                     </div>
                 </div>
             </div>
@@ -85,12 +166,13 @@
             </div>
             <div class="p-6">
                 <div class="flex flex-col md:flex-row items-center">
-                    <div class="mb-4 md:mb-0 md:mr-6">
-                        <img class="h-24 w-24 rounded-full" src="https://picsum.photos/seed/user123/200/200.jpg" alt="Profile">
+                    <div class="mb-4 md:mb-0 md:mr-6 relative">
+                        <div id="profileImageContainer"></div>
+                        <div id="vipBadge" class="vip-badge vip-gold">GOLD</div>
                     </div>
                     <div class="text-center md:text-left">
-                        <h3 class="text-xl font-bold text-white" id="profileName">John Doe</h3>
-                        <p class="text-sm text-gray-300" id="profileEmail">john.doe@example.com</p>
+                        <h3 class="text-xl font-bold text-white" id="profileName">Trader</h3>
+                        <p class="text-sm text-gray-300" id="profileEmail">trade.oo1@gmail.com</p>
                         <p class="text-sm text-gray-300" id="profilePhone">+254 712 345 678</p>
                         <div class="mt-2">
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400">
@@ -99,11 +181,84 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Profile Stats -->
+                <div class="profile-stats mt-6">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalInvestment">KSH 0</div>
+                        <div class="stat-label">Total Investment</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalProfit">KSH 0</div>
+                        <div class="stat-label">Total Profit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="activeBots">0</div>
+                        <div class="stat-label">Active Bots</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="referrals">0</div>
+                        <div class="stat-label">Referrals</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Personal Information Section -->
+        <div class="glass-card p-6 hover-lift mb-8">
+            <div class="px-6 py-5 border-b border-white/10">
+                <h2 class="text-lg font-medium">Personal Information</h2>
+            </div>
+            <div class="p-6">
+                <form id="profileForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1" for="name">
+                                Full Name
+                            </label>
+                            <input type="text" id="name" name="name" required
+                                class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1" for="email">
+                                Email Address
+                            </label>
+                            <input type="email" id="email" name="email" required
+                                class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1" for="phone">
+                                Phone Number
+                            </label>
+                            <input type="tel" id="phone" name="phone"
+                                class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1" for="country">
+                                Country
+                            </label>
+                            <select id="country" name="country"
+                                class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white">
+                                <option value="Kenya">Kenya</option>
+                                <option value="Nigeria">Nigeria</option>
+                                <option value="South Africa">South Africa</option>
+                                <option value="Uganda">Uganda</option>
+                                <option value="Tanzania">Tanzania</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-8">
+                        <button type="submit" class="btn-primary px-6 py-3 rounded-md text-white">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
         <!-- Password Change Section -->
-        <div class="glass-card p-6 hover-lift">
+        <div class="glass-card p-6 hover-lift mb-8">
             <div class="px-6 py-5 border-b border-white/10">
                 <h2 class="text-lg font-medium">Change Password</h2>
             </div>
@@ -143,7 +298,7 @@
         </div>
 
         <!-- Security Tips -->
-        <div class="glass-card p-6 hover-lift mt-8">
+        <div class="glass-card p-6 hover-lift">
             <div class="px-6 py-5 border-b border-white/10">
                 <h2 class="text-lg font-medium">Security Tips</h2>
             </div>
@@ -194,6 +349,10 @@
                 <i class="fas fa-users text-2xl"></i>
                 <p class="text-xs">Referrals</p>
             </a>
+            <a href="profile.html" class="text-blue-400 text-center">
+                <i class="fas fa-user text-2xl"></i>
+                <p class="text-xs">Profile</p>
+            </a>
         </div>
     </div>
 
@@ -201,19 +360,143 @@
     <div id="notification" class="notification"></div>
 
     <script>
-        // Load user data
+        // API Base URL
+        const API_BASE = 'https://fly-io-haha.onrender.com/';
+        
+        // Check if user is logged in
+        let token = localStorage.getItem('token');
         let user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
         
-        if (user) {
-            document.getElementById('profileName').textContent = user.name;
-            document.getElementById('profileEmail').textContent = user.email;
-            document.getElementById('profilePhone').textContent = user.phone || '+254 712 345 678';
-            document.getElementById('userImage').src = user.profile_image || 'https://picsum.photos/seed/user123/200/200.jpg';
+        // Function to extract username from email
+        function getUsernameFromEmail(email) {
+            if (!email) return 'User';
+            return email.split('@')[0];
         }
-
+        
+        // Function to render user avatar
+        function renderUserAvatar(imageUrl, containerId) {
+            const container = document.getElementById(containerId);
+            
+            if (imageUrl) {
+                container.innerHTML = `<img src="${imageUrl}" alt="Profile" class="w-24 h-24 rounded-full">`;
+            } else {
+                container.innerHTML = `
+                    <div class="default-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                `;
+            }
+        }
+        
+        // Function to determine VIP level based on investment
+        function getVIPLevel(investment) {
+            if (!investment) return { level: 'Standard', class: 'vip-gold' };
+            
+            const investAmount = parseFloat(investment);
+            
+            if (investAmount >= 100000) {
+                return { level: 'ELITE', class: 'vip-elite' };
+            } else if (investAmount >= 50000) {
+                return { level: 'DIAMOND', class: 'vip-diamond' };
+            } else if (investAmount >= 20000) {
+                return { level: 'PLATINUM', class: 'vip-platinum' };
+            } else if (investAmount >= 5000) {
+                return { level: 'GOLD', class: 'vip-gold' };
+            } else {
+                return { level: 'Standard', class: 'vip-gold' };
+            }
+        }
+        
+        // Load user data
+        function loadUserData() {
+            if (user) {
+                // Use email username for display
+                const username = getUsernameFromEmail(user.email);
+                document.getElementById('profileName').textContent = user.name || username;
+                document.getElementById('profileEmail').textContent = user.email;
+                document.getElementById('profilePhone').textContent = user.phone || '+254 712 345 678';
+                
+                // Set form values
+                document.getElementById('name').value = user.name || '';
+                document.getElementById('email').value = user.email || '';
+                document.getElementById('phone').value = user.phone || '';
+                document.getElementById('country').value = user.country || 'Kenya';
+                
+                // Render profile images
+                const savedPhoto = localStorage.getItem('forexpro_profile');
+                renderUserAvatar(savedPhoto || user.profile_image, 'profileImageContainer');
+                renderUserAvatar(savedPhoto || user.profile_image, 'userImageContainer');
+                
+                // Set stats
+                document.getElementById('totalInvestment').textContent = `KSH ${parseFloat(user.balance || 0).toLocaleString()}`;
+                document.getElementById('totalProfit').textContent = `KSH ${parseFloat(user.profit || 0).toLocaleString()}`;
+                document.getElementById('activeBots').textContent = user.active_bots || 0;
+                document.getElementById('referrals').textContent = user.referrals || 0;
+                
+                // Set VIP level
+                const vipInfo = getVIPLevel(user.balance);
+                const vipBadge = document.getElementById('vipBadge');
+                vipBadge.textContent = vipInfo.level;
+                vipBadge.className = `vip-badge ${vipInfo.class}`;
+            }
+        }
+        
+        // Load user data on page load
+        loadUserData();
+        
+        // Profile image upload
+        document.getElementById('userAvatar').addEventListener('click', () => {
+            document.getElementById('imageUpload').click();
+        });
+        
+        document.getElementById('imageUpload').addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const newImg = ev.target.result;
+                    renderUserAvatar(newImg, 'profileImageContainer');
+                    renderUserAvatar(newImg, 'userImageContainer');
+                    localStorage.setItem('forexpro_profile', newImg);
+                    showNotification('Profile photo updated!', 'success');
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+        
+        // Profile form submission
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!token) {
+                showNotification('Please login to update your profile', 'error');
+                return;
+            }
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                country: document.getElementById('country').value
+            };
+            
+            // Update user data in localStorage
+            user = { ...user, ...formData };
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // Simulate API call
+            setTimeout(() => {
+                showNotification('Profile updated successfully!', 'success');
+            }, 1000);
+        });
+        
         // Password change form submission
         document.getElementById('passwordChangeForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            if (!token) {
+                showNotification('Please login to change your password', 'error');
+                return;
+            }
             
             const currentPassword = document.getElementById('currentPassword').value;
             const newPassword = document.getElementById('newPassword').value;
@@ -241,12 +524,12 @@
                 document.getElementById('passwordChangeForm').reset();
             }, 1000);
         });
-
+        
         // Notification function
         function showNotification(message, type) {
             const notification = document.getElementById('notification');
             notification.textContent = message;
-            notification.className = 'notification ' + type;
+            notification.className = `notification ${type}`;
             notification.classList.add('show');
             
             setTimeout(() => {

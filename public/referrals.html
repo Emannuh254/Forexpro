@@ -5,72 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ForexPro - Referrals Program</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/referrals.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
-            min-height: 100dvh;
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.5rem;
-        }
-        .hover-lift { 
-            transition: all 0.3s ease; 
-        }
-        .hover-lift:hover { 
-            transform: translateY(-8px); 
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); 
-        }
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 3px solid white;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: none;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .toast.success { background-color: #3b82f6; }
-        .toast.error { background-color: #ef4444; }
-        .progress-bar { 
-            height: 10px; 
-            background: rgba(255, 255, 255, 0.15); 
-            border-radius: 999px; 
-            overflow: hidden; 
-        }
-        .progress-fill { 
-            height: 100%; 
-            background: linear-gradient(90deg, #3b82f6, #60a5fa); 
-            border-radius: 999px; 
-            transition: width 1.5s ease; 
-        }
-        .clickable { cursor: pointer; }
-    </style>
+
 </head>
 <body class="gradient-bg text-white min-h-screen">
 
@@ -356,165 +293,20 @@
                 <p class="text-xs">Wallet</p>
             </a>
 
-            <a href="profile.html" class="text-blue-400 text-center">
-                <i class="fas fa-users text-2xl"></i>
-                <p class="text-xs">Profile</p>
-            </a>
             <a href="referrals.html" class="text-blue-400 text-center">
                 <i class="fas fa-users text-2xl"></i>
                 <p class="text-xs">Referrals</p>
+            </a>
+            <a href="profile.html" class="text-blue-400 text-center">
+                <i class="fas fa-users text-2xl"></i>
+                <p class="text-xs">Profile</p>
             </a>
         </div>
     </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
+    <script src="js/referrals.js"></script>
 
-    <script>
-        // Check if user is logged in
-        let token = localStorage.getItem('token');
-        let user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
-
-        // Load user data
-        if (user) {
-            document.getElementById('totalReferrals').textContent = user.total_referrals || 0;
-            document.getElementById('totalBonus').textContent = `KSH ${parseFloat(user.total_bonus || 0).toLocaleString()}`;
-            document.getElementById('pendingReferrals').textContent = user.pending_referrals || 0;
-            
-            // Set referral link
-            const referralLink = `https://forexpro.com/signup?ref=${user.referral_code || user.id}`;
-            document.getElementById('referralLink').value = referralLink;
-            
-            // Load profile image
-            const savedPhoto = localStorage.getItem('forexpro_profile');
-            if (savedPhoto) {
-                document.getElementById('userImage').src = savedPhoto;
-            } else {
-                document.getElementById('userImage').src = user.profile_image || 'https://randomuser.me/api/portraits/men/45.jpg';
-            }
-        } else {
-            // Default values for non-logged in users
-            document.getElementById('referralLink').value = 'https://forexpro.com/signup?ref=guest';
-            document.getElementById('userImage').src = 'https://randomuser.me/api/portraits/men/45.jpg';
-        }
-
-        // Copy referral link
-        document.querySelector('.copy-referral').addEventListener('click', function() {
-            const referralLink = document.getElementById('referralLink');
-            referralLink.select();
-            referralLink.setSelectionRange(0, 99999); // For mobile devices
-            
-            navigator.clipboard.writeText(referralLink.value).then(() => {
-                showToast('Referral link copied to clipboard!', 'success');
-            }).catch(err => {
-                showToast('Failed to copy link', 'error');
-            });
-        });
-
-        // Share buttons
-        document.querySelectorAll('.share-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const platform = this.getAttribute('data-platform');
-                const referralLink = document.getElementById('referralLink').value;
-                const text = 'Join me on ForexPro and start earning today!';
-                
-                let shareUrl = '';
-                
-                switch(platform) {
-                    case 'facebook':
-                        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`;
-                        break;
-                    case 'twitter':
-                        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralLink)}`;
-                        break;
-                    case 'whatsapp':
-                        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + referralLink)}`;
-                        break;
-                    case 'email':
-                        shareUrl = `mailto:?subject=${encodeURIComponent('Join me on ForexPro')}&body=${encodeURIComponent(text + '\n\n' + referralLink)}`;
-                        break;
-                }
-                
-                if (shareUrl) {
-                    window.open(shareUrl, '_blank');
-                }
-            });
-        });
-
-        // Refresh button
-        document.getElementById('refreshBtn').addEventListener('click', function() {
-            const icon = this.querySelector('i');
-            icon.classList.add('fa-spin');
-            
-            // Simulate API call
-            setTimeout(() => {
-                icon.classList.remove('fa-spin');
-                showToast('Referral data refreshed!', 'success');
-                loadReferralHistory();
-            }, 1000);
-        });
-
-        // Load referral history
-        function loadReferralHistory() {
-            const tbody = document.getElementById('referralHistoryBody');
-            const noReferrals = document.getElementById('noReferrals');
-            
-            // Clear existing data
-            tbody.innerHTML = '';
-            
-            // Simulate API call
-            setTimeout(() => {
-                // Demo data
-                const referrals = [
-                    { date: '2023-10-15', name: 'Alex Johnson', email: 'alex@example.com', status: 'Completed', bonus: 200 },
-                    { date: '2023-10-10', name: 'Sarah Williams', email: 'sarah@example.com', status: 'Completed', bonus: 200 },
-                    { date: '2023-10-05', name: 'Michael Brown', email: 'michael@example.com', status: 'Pending', bonus: 0 }
-                ];
-                
-                if (referrals.length > 0) {
-                    noReferrals.style.display = 'none';
-                    
-                    referrals.forEach(referral => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">${referral.date}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">${referral.name}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">${referral.email}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${referral.status === 'Completed' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}">
-                                    ${referral.status}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                ${referral.bonus > 0 ? `KSH ${referral.bonus}` : '-'}
-                            </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                } else {
-                    noReferrals.style.display = 'block';
-                }
-            }, 500);
-        }
-
-        // Load referral history on page load
-        if (user) {
-            loadReferralHistory();
-        } else {
-            document.getElementById('noReferrals').style.display = 'block';
-        }
-
-        // Toast notification function
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type}`;
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-    </script>
 </body>
 </html>
