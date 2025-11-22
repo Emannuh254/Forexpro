@@ -206,28 +206,24 @@ const initializeDatabase = async () => {
     } catch (err) {
       console.log('Indexes might already exist:', err.message);
     }
+
     // Create admin user if not exists
     const adminExists = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@forexpro.com']);
     if (adminExists.rows.length === 0) {
-      const hashedPassword = await bcrypt.hash('nfsmostwanted2005', SALT_ROUNDS);
+      const hashedPassword = await bcrypt.hash('admin123', SALT_ROUNDS);
       await pool.query(
         `INSERT INTO users (name, email, password, role, balance, currency) 
-        VALUES ($1, $2, $3, $4, $5, $6)`,
-        ['Mannuh', 'admin@forexpro.com', hashedPassword, 'admin', 1000000, 'USD']
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['Admin User', 'admin@forexpro.com', hashedPassword, 'admin', 1000000, 'USD']
       );
-      console.log('Admin user created with name "Mannuh"');
-    } else {
-      console.log('Admin user already exists, updating password...');
-      const hashedPassword = await bcrypt.hash('nfsmostwanted2005', SALT_ROUNDS);
-      await pool.query(
-        'UPDATE users SET name = $1, password = $2 WHERE email = $3',
-        ['Mannuh', hashedPassword, 'admin@forexpro.com']
-      );
-      console.log('Admin user password updated successfully');
+      console.log('Admin user created');
     }
 
-
-
+    console.log('Database initialized successfully');
+  } catch (err) {
+    console.error('Error initializing database:', err);
+    throw err;
+  }
 };
 
 // ==================== HELPER FUNCTIONS ====================
@@ -1429,12 +1425,19 @@ app.use((err, req, res, next) => {
 });
 
 // ==================== SERVER STARTUP ====================
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  await pool.end();
+  process.exit(0);
+});
+
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
   await pool.end();
   process.exit(0);
 });
-
 
 // Start server
 const startServer = async () => {
