@@ -104,7 +104,7 @@
         <form id="adminLoginForm" class="space-y-6">
             <div>
                 <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                <input type="text" id="username" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white" placeholder="admin" required>
+                <input type="text" id="username" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-white" placeholder="mannuh" required>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
@@ -308,8 +308,8 @@
     <div id="notification" class="notification"></div>
 
     <script>
-        // API Base URL
-        const API_BASE = 'https://fly-io-haha.onrender.com/api';
+        // API Base URL - Updated to match your server URL
+        const API_BASE = 'https://fly-io-haha.onrender.com';
         
         // Check if admin is logged in
         let adminToken = localStorage.getItem('adminToken');
@@ -347,7 +347,7 @@
             const password = document.getElementById('password').value;
             
             try {
-                const response = await fetch(`${API_BASE}/admin/login`, {
+                const response = await fetch(`${API_BASE}/api/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -366,7 +366,8 @@
                     showNotification(data.message || 'Login failed', 'error');
                 }
             } catch (err) {
-                showNotification('Network error. Please try again.', 'error');
+                console.error('Login error:', err);
+                showNotification('Network error. Please check your connection and try again.', 'error');
             }
         });
         
@@ -383,13 +384,13 @@
         async function loadDashboardData() {
             try {
                 // Load stats
-                const usersResponse = await fetch(`${API_BASE}/admin/users`, {
+                const usersResponse = await fetch(`${API_BASE}/api/admin/users`, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 const usersData = await usersResponse.json();
                 document.getElementById('totalUsers').textContent = usersData.length;
                 
-                const transactionsResponse = await fetch(`${API_BASE}/admin/transactions`, {
+                const transactionsResponse = await fetch(`${API_BASE}/api/admin/transactions`, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 const transactionsData = await transactionsResponse.json();
@@ -410,6 +411,7 @@
                 // Load user select for deposit
                 loadUserSelect(usersData);
             } catch (err) {
+                console.error('Dashboard data error:', err);
                 showNotification('Failed to load dashboard data', 'error');
             }
         }
@@ -459,7 +461,7 @@
                     const transactionId = this.getAttribute('data-id');
                     
                     try {
-                        const response = await fetch(`${API_BASE}/admin/transactions/${transactionId}`, {
+                        const response = await fetch(`${API_BASE}/api/admin/transactions/${transactionId}`, {
                             method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
@@ -476,6 +478,7 @@
                             showNotification(data.message || 'Failed to complete transaction', 'error');
                         }
                     } catch (err) {
+                        console.error('Complete transaction error:', err);
                         showNotification('Network error. Please try again.', 'error');
                     }
                 });
@@ -500,7 +503,7 @@
                         ${user.email}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        $${parseFloat(user.balance || 0).toFixed(2)}
+                        ${user.currency === 'USD' ? '$' : 'KSH'}${parseFloat(user.balance || 0).toLocaleString()}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                         ${user.referrals || 0}
@@ -563,14 +566,14 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/admin/deposit`, {
+                const response = await fetch(`${API_BASE}/api/admin/deposit`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${adminToken}`
                     },
                     body: JSON.stringify({ 
-                        user_id: userId, 
+                        userId: userId, 
                         amount: amount,
                         currency: 'KSH',
                         note: note
@@ -587,6 +590,7 @@
                     showNotification(data.message || 'Failed to process deposit', 'error');
                 }
             } catch (err) {
+                console.error('Deposit error:', err);
                 showNotification('Network error. Please try again.', 'error');
             }
         });
@@ -607,17 +611,23 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/admin/users/search?term=${searchTerm}`, {
+                const response = await fetch(`${API_BASE}/api/admin/users`, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 
                 if (response.ok) {
                     const usersData = await response.json();
-                    loadUsersTable(usersData);
+                    // Filter users based on search term
+                    const filteredUsers = usersData.filter(user => 
+                        user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+                    loadUsersTable(filteredUsers);
                 } else {
                     showNotification('Failed to search users', 'error');
                 }
             } catch (err) {
+                console.error('Search users error:', err);
                 showNotification('Network error. Please try again.', 'error');
             }
         });
@@ -637,17 +647,22 @@
                 const filter = this.getAttribute('data-filter');
                 
                 try {
-                    const response = await fetch(`${API_BASE}/admin/transactions?filter=${filter}`, {
+                    const response = await fetch(`${API_BASE}/api/admin/transactions`, {
                         headers: { 'Authorization': `Bearer ${adminToken}` }
                     });
                     
                     if (response.ok) {
                         const transactionsData = await response.json();
-                        loadTransactionsTable(transactionsData);
+                        // Filter transactions based on status
+                        const filteredTransactions = filter === 'all' 
+                            ? transactionsData 
+                            : transactionsData.filter(t => t.status === filter);
+                        loadTransactionsTable(filteredTransactions);
                     } else {
                         showNotification('Failed to filter transactions', 'error');
                     }
                 } catch (err) {
+                    console.error('Filter transactions error:', err);
                     showNotification('Network error. Please try again.', 'error');
                 }
             });
