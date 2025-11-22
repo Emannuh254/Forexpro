@@ -14,6 +14,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const { body, validationResult } = require('express-validator');
+const mime = require('mime-types');
 
 // ==================== CONFIGURATION ====================
 const app = express();
@@ -65,24 +66,12 @@ pool.on('error', (err) => {
 });
 
 // ==================== MIDDLEWARE ====================
-// Replace your current helmet configuration with this:
+// Disable CSP for development
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'", "data:", "blob:", "https:"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https:", "data:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:"],
-      fontSrc: ["'self'", "https:", "data:"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https:"],
-      mediaSrc: ["'self'", "https:", "data:"],
-      objectSrc: ["'none'"],
-      childSrc: ["'self'", "https:"],
-      workerSrc: ["'self'", "blob:"],
-      frameSrc: ["'self'", "https:"],
-      formAction: ["'self'", "https:"],
-    },
-  },
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
 }));
 
 app.use(compression());
@@ -124,6 +113,44 @@ app.use((req, res, next) => {
   const baseUrl = 'https://fly-io-haha.onrender.com';
   const fullUrl = `${baseUrl}${req.originalUrl}`;
   console.log(`[${new Date().toISOString()}] ${req.method} ${fullUrl}`);
+  next();
+});
+
+// ==================== FILE SYSTEM SETUP ====================
+const publicDir = path.join(__dirname, 'public');
+if (!fs.existsSync(publicDir)) {
+  console.log('Creating public directory...');
+  fs.mkdirSync(publicDir, { recursive: true });
+}
+
+// Serve static files with proper MIME types
+app.use(express.static(path.join(__dirname, 'public'), {
+  dotfiles: 'ignore',
+  etag: true,
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    // Set proper MIME types
+    const mimeType = mime.lookup(filePath);
+    if (mimeType) {
+      res.setHeader('Content-Type', mimeType);
+    }
+    
+    // No cache for HTML files
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
+
+// Fallback for static files
+app.use((req, res, next) => {
+  // If the request is for a file with an extension, try to serve it
+  if (path.extname(req.path).length > 0) {
+    const filePath = path.join(publicDir, req.path);
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    }
+  }
   next();
 });
 
@@ -291,25 +318,6 @@ const killPort = (port) => {
     tryCommand(0);
   });
 };
-
-// ==================== FILE SYSTEM SETUP ====================
-const publicDir = path.join(__dirname, 'public');
-if (!fs.existsSync(publicDir)) {
-  console.log('Creating public directory...');
-  fs.mkdirSync(publicDir, { recursive: true });
-}
-
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public'), {
-  dotfiles: 'ignore',
-  etag: true,
-  maxAge: '1h',
-  setHeaders: (res, path) => {
-    if (path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
-    }
-  }
-}));
 
 // ==================== HTML PAGE ROUTES ====================
 
