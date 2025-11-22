@@ -157,6 +157,75 @@
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
+        .balance-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            margin-left: 1rem;
+            font-weight: bold;
+        }
+        .market-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-4px);
+        }
+        .economic-calendar {
+            overflow-x: auto;
+        }
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .calendar-table th, .calendar-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .calendar-table th {
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .impact-high {
+            color: #ef4444;
+        }
+        .impact-medium {
+            color: #f59e0b;
+        }
+        .impact-low {
+            color: #10b981;
+        }
+        .trading-tools {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .tool-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .tool-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-4px);
+        }
+        .tool-card i {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            color: #3b82f6;
+        }
     </style>
 </head>
 <body class="gradient-bg text-white min-h-screen">
@@ -175,8 +244,12 @@
                     <a href="deposit-withdraw.html" class="hover:text-blue-300 transition">Wallet</a>
                     <a href="referrals.html" class="hover:text-blue-300 transition">Referrals</a>
                      <a href="profile.html" class="hover:text-blue-300 transition">Profile</a>
+                    <button id="logoutBtn" class="text-red-400 hover:text-red-300 transition" style="display: none;">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    </button>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <div id="userBalance" class="balance-display hidden">KSH 0</div>
                     <button class="p-2 hover:bg-white/10 rounded-full transition"><i class="fas fa-bell"></i></button>
                     <div class="user-avatar">
                         <img id="userImage" src="" alt="You" class="w-10 h-10 rounded-full ring-2 ring-blue-400">
@@ -236,6 +309,86 @@
                     </div>
                 </div>
 
+                <!-- Market Statistics -->
+                <div class="glass-card p-6 hover-lift">
+                    <h2 class="text-2xl font-bold mb-4">Market Statistics</h2>
+                    <div class="market-stats">
+                        <div class="stat-card">
+                            <p class="text-gray-400 text-sm">Market Cap</p>
+                            <p class="text-xl font-bold">$2.4T</p>
+                            <p class="text-green-500 text-sm">+1.2%</p>
+                        </div>
+                        <div class="stat-card">
+                            <p class="text-gray-400 text-sm">24h Volume</p>
+                            <p class="text-xl font-bold">$125B</p>
+                            <p class="text-red-500 text-sm">-0.8%</p>
+                        </div>
+                        <div class="stat-card">
+                            <p class="text-gray-400 text-sm">BTC Dominance</p>
+                            <p class="text-xl font-bold">48.3%</p>
+                            <p class="text-green-500 text-sm">+0.4%</p>
+                        </div>
+                        <div class="stat-card">
+                            <p class="text-gray-400 text-sm">Active Cryptos</p>
+                            <p class="text-xl font-bold">9,542</p>
+                            <p class="text-gray-500 text-sm">+24</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Economic Calendar -->
+                <div class="glass-card p-6 hover-lift">
+                    <h2 class="text-2xl font-bold mb-4">Economic Calendar</h2>
+                    <div class="economic-calendar">
+                        <table class="calendar-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Event</th>
+                                    <th>Impact</th>
+                                    <th>Actual</th>
+                                    <th>Forecast</th>
+                                    <th>Previous</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>08:30</td>
+                                    <td>USD CPI</td>
+                                    <td><span class="impact-high">High</span></td>
+                                    <td>3.2%</td>
+                                    <td>3.3%</td>
+                                    <td>3.4%</td>
+                                </tr>
+                                <tr>
+                                    <td>09:15</td>
+                                    <td>EUR Interest Rate</td>
+                                    <td><span class="impact-high">High</span></td>
+                                    <td>4.5%</td>
+                                    <td>4.5%</td>
+                                    <td>4.5%</td>
+                                </tr>
+                                <tr>
+                                    <td>10:00</td>
+                                    <td>GBP GDP</td>
+                                    <td><span class="impact-medium">Medium</span></td>
+                                    <td>0.6%</td>
+                                    <td>0.4%</td>
+                                    <td>0.2%</td>
+                                </tr>
+                                <tr>
+                                    <td>12:30</td>
+                                    <td>CAD Retail Sales</td>
+                                    <td><span class="impact-medium">Medium</span></td>
+                                    <td>-0.1%</td>
+                                    <td>0.3%</td>
+                                    <td>0.5%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Trading Panel -->
@@ -290,10 +443,33 @@
                     </form>
                 </div>
 
+                <!-- Trading Tools -->
+                <div class="glass-card p-6 hover-lift">
+                    <h2 class="text-xl font-bold mb-4">Trading Tools</h2>
+                    <div class="trading-tools">
+                        <div class="tool-card">
+                            <i class="fas fa-calculator"></i>
+                            <p>Pip Calculator</p>
+                        </div>
+                        <div class="tool-card">
+                            <i class="fas fa-chart-pie"></i>
+                            <p>Risk Management</p>
+                        </div>
+                        <div class="tool-card">
+                            <i class="fas fa-signal"></i>
+                            <p>Technical Analysis</p>
+                        </div>
+                        <div class="tool-card">
+                            <i class="fas fa-newspaper"></i>
+                            <p>Sentiment Analysis</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Open Positions -->
                 <div class="glass-card p-6 hover-lift">
                     <h2 class="text-xl font-bold mb-4">Open Positions</h2>
-                    <div class="space-y-4 overflow-y-auto max-h-80 scrollbar-hide">
+                    <div class="space-y-4 overflow-y-auto max-h-80 scrollbar-hide" id="openPositions">
                         <div class="bg-white/10 rounded-xl p-4">
                             <div class="flex justify-between">
                                 <div>
@@ -411,6 +587,78 @@
     </div>
 
     <script>
+        // API Base URL
+        const API_BASE = 'https://fly-io-haha.onrender.com/';
+        
+        // Check if user is logged in
+        let token = localStorage.getItem('token');
+        let user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+        let isLoggedIn = !!token;
+
+        // Load user data if logged in
+        function loadUserData() {
+            if (user) {
+                // Update UI with user data
+                document.getElementById('userBalance').textContent = `KSH ${parseFloat(user.balance || 0).toLocaleString()}`;
+                document.getElementById('userBalance').classList.remove('hidden');
+                document.getElementById('logoutBtn').style.display = 'block';
+                
+                // Load profile image
+                const savedPhoto = localStorage.getItem('forexpro_profile') || user.profile_image;
+                if (savedPhoto) {
+                    document.getElementById('userImage').src = savedPhoto;
+                } else {
+                    document.getElementById('userImage').src = 'https://randomuser.me/api/portraits/men/45.jpg';
+                }
+                
+                // Check for first login bonus
+                checkFirstLoginBonus();
+            } else {
+                document.getElementById('userBalance').classList.add('hidden');
+                document.getElementById('logoutBtn').style.display = 'none';
+                document.getElementById('userImage').src = 'https://randomuser.me/api/portraits/men/45.jpg';
+            }
+        }
+
+        // Check and award first login bonus
+        function checkFirstLoginBonus() {
+            const firstLoginBonusClaimed = localStorage.getItem('firstLoginBonusClaimed');
+            
+            if (!firstLoginBonusClaimed && user) {
+                // Add bonus to user balance
+                const currentBalance = parseFloat(user.balance || 0);
+                const bonusAmount = 50;
+                const newBalance = currentBalance + bonusAmount;
+                
+                // Update user data
+                user.balance = newBalance;
+                localStorage.setItem('user', JSON.stringify(user));
+                
+                // Update UI
+                document.getElementById('userBalance').textContent = `KSH ${newBalance.toLocaleString()}`;
+                
+                // Mark bonus as claimed
+                localStorage.setItem('firstLoginBonusClaimed', 'true');
+                
+                // Show success notification
+                showNotification('First login bonus of KSH 50 credited to your account!', 'success');
+            }
+        }
+
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            token = null;
+            user = null;
+            isLoggedIn = false;
+            loadUserData();
+            showNotification('Logged out successfully', 'success');
+        });
+
+        // Initialize user data on page load
+        loadUserData();
+
         // Generate trading pair buttons
         const pairs = ["EUR/USD","GBP/USD","USD/JPY","AUD/USD","BTC/USD","XAU/USD"];
         const pairContainer = document.getElementById('pairContainer');
@@ -444,19 +692,6 @@
                 btn.classList.add('bg-blue-600');
             });
         });
-
-        // Check if user is logged in
-        let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        
-        // Load user data if logged in
-        let userData = null;
-        if (isLoggedIn) {
-            userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        }
-
-        // Load profile image
-        const savedPhoto = localStorage.getItem('forexpro_profile') || 'https://randomuser.me/api/portraits/men/45.jpg';
-        document.getElementById('userImage').src = savedPhoto;
 
         // Chart setup
         const ctx = document.getElementById('priceChart').getContext('2d');
@@ -616,6 +851,14 @@
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('bg-blue-600'));
                 btn.classList.add('bg-blue-600');
+            });
+        });
+
+        // Trading tools click handlers
+        document.querySelectorAll('.tool-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const toolName = card.querySelector('p').textContent;
+                showNotification(`${toolName} feature coming soon!`, 'warning');
             });
         });
     </script>

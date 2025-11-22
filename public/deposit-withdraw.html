@@ -90,6 +90,18 @@
             letter-spacing: 2px;
             white-space: nowrap;
         }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="gradient-bg text-white min-h-screen">
@@ -108,7 +120,6 @@
                     <a href="deposit-withdraw.html" class="text-blue-400 font-bold border-b-2 border-blue-400 pb-1">Wallet</a>
                     <a href="referrals.html" class="hover:text-blue-300 transition">Referrals</a>
                     <a href="profile.html" class="hover:text-blue-300 transition">Profile</a>
-                
                 </div>
                 <div class="flex items-center space-x-4">
                     <button class="p-2 hover:bg-white/10 rounded-full transition"><i class="fas fa-bell"></i></button>
@@ -246,10 +257,10 @@
                             <div class="bg-white/10 rounded-lg p-4">
                                 <div class="flex justify-between items-center mb-3">
                                     <span class="text-sm text-gray-400">Contract address ending in</span>
-                                    <span class="text-sm font-medium">97955</span>
+                                    <span class="text-sm font-medium" id="address-ending">97955</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <p class="font-mono text-sm break-all pr-2">0x081fc7d993439f0aa44e8d9514c00d0b560fb940</p>
+                                    <p class="font-mono text-sm break-all pr-2" id="deposit-address">0x081fc7d993439f0aa44e8d9514c00d0b560fb940</p>
                                     <button class="text-blue-400 hover:text-blue-300 copy-address">
                                         <i class="fas fa-copy"></i>
                                     </button>
@@ -496,11 +507,10 @@
                 <i class="fas fa-users text-2xl"></i>
                 <p class="text-xs">Referrals</p>
             </a>
-            
             <a href="profile.html" class="text-gray-400 text-center">
-                <i class="fas fa-users text-2xl"></i>
+                <i class="fas fa-user text-2xl"></i>
                 <p class="text-xs">Profile</p>
-                </a>
+            </a>
         </div>
     </div>
 
@@ -509,7 +519,7 @@
 
     <script>
         // API Base URL
-        const API_BASE = '/api';
+        const API_BASE = 'https://fly-io-haha.onrender.com';
 
         // Check if user is logged in
         let token = localStorage.getItem('token');
@@ -520,6 +530,7 @@
             document.getElementById('userImage').src = user.profile_image || 'https://randomuser.me/api/portraits/men/45.jpg';
             updateBalances();
             loadTransactions();
+            fetchDepositAddress();
         }
 
         // Update balances
@@ -542,12 +553,29 @@
             document.getElementById('mpesa-available-balance').textContent = `KSH ${(availableBalance * usdToKsh).toFixed(0)}`;
         }
 
+        // Fetch deposit address from server
+        async function fetchDepositAddress() {
+            try {
+                const response = await fetch(`${API_BASE}/api/deposit/address`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('deposit-address').textContent = data.address;
+                    document.getElementById('address-ending').textContent = data.address.slice(-5);
+                }
+            } catch (err) {
+                console.error('Error fetching deposit address:', err);
+            }
+        }
+
         // Load transactions
         async function loadTransactions() {
             if (!token) return;
 
             try {
-                const response = await fetch(`${API_BASE}/transactions`, {
+                const response = await fetch(`${API_BASE}/api/transactions`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -698,7 +726,7 @@
 
         // Copy address functionality
         document.querySelector('.copy-address').addEventListener('click', function() {
-            const address = '0x081fc7d993439f0aa44e8d9514c00d0b560fb940';
+            const address = document.getElementById('deposit-address').textContent;
             navigator.clipboard.writeText(address);
             
             // Show copied notification
@@ -722,8 +750,13 @@
                 return;
             }
 
+            // Show loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="loading"></span> Processing...';
+            this.disabled = true;
+
             try {
-                const response = await fetch(`${API_BASE}/deposit`, {
+                const response = await fetch(`${API_BASE}/api/deposit`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -734,7 +767,7 @@
                         method: 'crypto',
                         currency: 'USD',
                         network: selectedNetwork,
-                        address: '0x081fc7d993439f0aa44e8d9514c00d0b560fb940'
+                        address: document.getElementById('deposit-address').textContent
                     })
                 });
 
@@ -751,6 +784,10 @@
                 }
             } catch (err) {
                 showNotification('Network error. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                this.innerHTML = originalText;
+                this.disabled = false;
             }
         });
 
@@ -779,8 +816,13 @@
                 return;
             }
 
+            // Show loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="loading"></span> Processing...';
+            this.disabled = true;
+
             try {
-                const response = await fetch(`${API_BASE}/withdraw`, {
+                const response = await fetch(`${API_BASE}/api/withdraw`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -808,6 +850,10 @@
                 }
             } catch (err) {
                 showNotification('Network error. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                this.innerHTML = originalText;
+                this.disabled = false;
             }
         });
 
@@ -834,8 +880,13 @@
                 return;
             }
 
+            // Show loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="loading"></span> Processing...';
+            this.disabled = true;
+
             try {
-                const response = await fetch(`${API_BASE}/withdraw`, {
+                const response = await fetch(`${API_BASE}/api/withdraw`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -864,6 +915,10 @@
                 }
             } catch (err) {
                 showNotification('Network error. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                this.innerHTML = originalText;
+                this.disabled = false;
             }
         });
 

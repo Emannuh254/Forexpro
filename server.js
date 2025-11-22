@@ -123,7 +123,7 @@ if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
 }
 
-// Serve static files with proper MIME types
+// Serve static files with proper MIME types - FIXED VERSION
 app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'ignore',
   etag: true,
@@ -148,6 +148,10 @@ app.use((req, res, next) => {
   if (path.extname(req.path).length > 0) {
     const filePath = path.join(publicDir, req.path);
     if (fs.existsSync(filePath)) {
+      // Explicitly set content type for HTML files
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Content-Type', 'text/html');
+      }
       return res.sendFile(filePath);
     }
   }
@@ -228,6 +232,18 @@ const initializeDatabase = async () => {
       );
     `);
 
+    // Create deposit addresses table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deposit_addresses (
+        id SERIAL PRIMARY KEY,
+        coin VARCHAR(20) NOT NULL,
+        network VARCHAR(20) NOT NULL,
+        address TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     // Create indexes for better performance
     try {
       await pool.query('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
@@ -237,21 +253,35 @@ const initializeDatabase = async () => {
       await pool.query('CREATE INDEX IF NOT EXISTS idx_bots_user_id ON trading_bots(user_id)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referral_bonuses(referrer_id)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_referrals_referred_id ON referral_bonuses(referred_id)');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_deposit_addresses_coin_network ON deposit_addresses(coin, network)');
       console.log('Database indexes created');
     } catch (err) {
       console.log('Indexes might already exist:', err.message);
     }
 
     // Create admin user if not exists
-    const adminExists = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@forexpro.com']);
+    const adminExists = await pool.query('SELECT * FROM users WHERE email = $1', ['mannuh']);
     if (adminExists.rows.length === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', SALT_ROUNDS);
+      const hashedPassword = await bcrypt.hash('123456', SALT_ROUNDS);
       await pool.query(
         `INSERT INTO users (name, email, password, role, balance, currency) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        ['Admin User', 'admin@forexpro.com', hashedPassword, 'admin', 1000000, 'USD']
+        ['Admin User', 'mannuh', hashedPassword, 'admin', 1000000, 'USD']
       );
-      console.log('Admin user created');
+      console.log('Admin user created with email: mannuh and password: 123456');
+    } else {
+      console.log('Admin user already exists with email: mannuh');
+    }
+
+    // Insert default deposit address if not exists
+    const addressExists = await pool.query('SELECT * FROM deposit_addresses WHERE coin = $1 AND network = $2', ['USDT', 'BSC']);
+    if (addressExists.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO deposit_addresses (coin, network, address) 
+         VALUES ($1, $2, $3)`,
+        ['USDT', 'BSC', '0x081fc7d993439f0aa44e8d9514c00d0b560fb940']
+      );
+      console.log('Default deposit address created');
     }
 
     console.log('Database initialized successfully');
@@ -321,7 +351,7 @@ const killPort = (port) => {
 
 // ==================== HTML PAGE ROUTES ====================
 
-// Serve specific HTML pages based on route
+// Serve specific HTML pages based on route - FIXED VERSION
 const htmlRoutes = [
   ['/dashboard', 'dashboard.html'],
   ['/admin', 'admin.html'],
@@ -334,13 +364,19 @@ const htmlRoutes = [
 
 htmlRoutes.forEach(([route, file]) => {
   app.get([route, `/${file}`], (req, res) => {
-    res.sendFile(path.join(publicDir, file));
+    const filePath = path.join(publicDir, file);
+    // Explicitly set content type for HTML files
+    res.setHeader('Content-Type', 'text/html');
+    res.sendFile(filePath);
   });
 });
 
 // Serve index.html for root path
 app.get(['/', '/index.html'], (req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
+  const filePath = path.join(publicDir, 'index.html');
+  // Explicitly set content type for HTML files
+  res.setHeader('Content-Type', 'text/html');
+  res.sendFile(filePath);
 });
 
 // ==================== AUTHENTICATION ROUTES ====================
@@ -629,6 +665,33 @@ app.put('/api/user/profile', [
 
 // ==================== TRANSACTION ROUTES ====================
 
+// Get deposit address
+app.get('/api/deposit/address', authenticateToken, async (req, res) => {
+  try {
+    // Default to USDT on BSC if no parameters provided
+    const coin = req.query.coin || 'USDT';
+    const network = req.query.network || 'BSC';
+    
+    const result = await pool.query(
+      'SELECT address FROM deposit_addresses WHERE coin = $1 AND network = $2',
+      [coin, network]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Deposit address not found for this coin and network' });
+    }
+    
+    res.status(200).json({
+      coin,
+      network,
+      address: result.rows[0].address
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Deposit API with referral bonus processing
 app.post('/api/deposit', [
   body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0'),
@@ -705,7 +768,7 @@ app.post('/api/deposit', [
       return res.status(200).json({
         message: 'Deposit request created',
         transactionId,
-        depositAddress: '0x081fc7d993439f0aa44e8d9514c00d0b560fb940',
+        depositAddress: address,
         network: network || 'BSC',
         amount: formatCurrency(convertedAmount, user.currency),
         originalAmount: formatCurrency(amount, currency)
@@ -1117,39 +1180,54 @@ app.post('/api/bots/:id/progress', [
 
 // Admin login
 app.post('/api/admin/login', [
-  body('username').notEmpty().withMessage('Username is required'),
-  body('password').notEmpty().withMessage('Password is required'),
+  body('username').trim().notEmpty().withMessage('Username is required'),
+  body('password').trim().notEmpty().withMessage('Password is required'),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ message: errors.array()[0].msg });
   }
 
   const { username, password } = req.body;
-  
+
   try {
-    // Check admin credentials
-    const result = await pool.query('SELECT * FROM users WHERE email = $1 AND role = $2', ['admin@forexpro.com', 'admin']);
+    // Lookup admin account
+    const query = `
+      SELECT * FROM users 
+      WHERE email = $1 AND role = 'admin'
+      LIMIT 1
+    `;
+    const result = await pool.query(query, [username]);
     const admin = result.rows[0];
-    
+
     if (!admin) {
+      console.log(`Admin not found for email: ${username}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    
-    const isPasswordValid = await bcrypt.compare(password, admin.password);
-    if (!isPasswordValid) {
+
+    // Verify password
+    const match = await bcrypt.compare(password, admin.password);
+    if (!match) {
+      console.log(`Password mismatch for admin: ${username}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    
-    const token = jwt.sign({ userId: admin.id, role: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
-    
-    res.status(200).json({ 
-      message: 'Admin login successful', 
-      token 
+
+    // Create token
+    const token = jwt.sign(
+      { userId: admin.id, role: 'admin' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log(`Admin login successful for: ${username}`);
+    return res.status(200).json({
+      message: 'Admin login successful',
+      token
     });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error("ADMIN LOGIN ERROR:", err);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1360,6 +1438,72 @@ app.get('/api/admin/withdrawals/pending', authenticateAdmin, async (req, res) =>
     });
     
     res.status(200).json(transactions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update deposit address (admin only)
+app.put('/api/admin/deposit/address', [
+  body('coin').isIn(['USDT', 'BTC', 'ETH']).withMessage('Invalid coin'),
+  body('network').isIn(['BSC', 'ETH', 'BTC']).withMessage('Invalid network'),
+  body('address').isLength({ min: 10 }).withMessage('Address is too short'),
+], authenticateAdmin, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { coin, network, address } = req.body;
+  
+  try {
+    // Check if address already exists
+    const addressExists = await pool.query(
+      'SELECT * FROM deposit_addresses WHERE coin = $1 AND network = $2',
+      [coin, network]
+    );
+    
+    if (addressExists.rows.length > 0) {
+      // Update existing address
+      await pool.query(
+        `UPDATE deposit_addresses 
+         SET address = $1, updated_at = NOW() 
+         WHERE coin = $2 AND network = $3`,
+        [address, coin, network]
+      );
+      console.log(`Updated deposit address for ${coin} on ${network} network`);
+    } else {
+      // Insert new address
+      await pool.query(
+        `INSERT INTO deposit_addresses (coin, network, address) 
+         VALUES ($1, $2, $3)`,
+        [coin, network, address]
+      );
+      console.log(`Created new deposit address for ${coin} on ${network} network`);
+    }
+    
+    res.status(200).json({ 
+      message: 'Deposit address updated successfully',
+      coin,
+      network,
+      address
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get deposit addresses (admin only)
+app.get('/api/admin/deposit/addresses', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM deposit_addresses ORDER BY coin, network',
+      []
+    );
+    
+    res.status(200).json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
