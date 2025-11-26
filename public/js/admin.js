@@ -18,12 +18,14 @@ document.addEventListener('DOMContentLoaded', function() {
         totalTransactions: document.getElementById('totalTransactions'),
         pendingTransactions: document.getElementById('pendingTransactions'),
         totalVolume: document.getElementById('totalVolume'),
+        fastTradingStatus: document.getElementById('fastTradingStatus'),
         
         // Quick Actions
         depositToUserBtn: document.getElementById('depositToUserBtn'),
         manageBotsBtn: document.getElementById('manageBotsBtn'),
         refreshDataBtn: document.getElementById('refreshDataBtn'),
         manageDepositAddressBtn: document.getElementById('manageDepositAddressBtn'),
+        toggleFastTradingBtn: document.getElementById('toggleFastTradingBtn'),
         
         // Chart Configuration
         chartConfigBtn: document.getElementById('chartConfigBtn'),
@@ -87,9 +89,10 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // API Configuration - Updated to use the new URL
-    const API_BASE = "https://forexproo.onrender.com";
+    const API_BASE = "https://forexproo.onrender.com/";
     let authToken = localStorage.getItem('adminAuthToken');
     let selectedUserId = null;
+    let fastTradingEnabled = false; // Track current fast trading status
 
     // Initialize the app
     init();
@@ -108,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadUsers();
                 loadTransactions();
                 loadChartConfig(); // Load chart configuration
+                loadFastTradingStatus(); // Load fast trading status
             } else {
                 console.log('Token invalid, showing login form');
                 showLoginForm();
@@ -180,6 +184,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 elements.depositAddressModal.classList.add('show');
                 loadDepositAddresses();
             });
+        }
+        
+        // Fast Trading Toggle
+        if (elements.toggleFastTradingBtn) {
+            elements.toggleFastTradingBtn.addEventListener('click', toggleFastTrading);
         }
         
         // Chart configuration
@@ -365,6 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadUsers();
                 loadTransactions();
                 loadChartConfig(); // Load chart configuration after login
+                loadFastTradingStatus(); // Load fast trading status after login
             } else {
                 showNotification(data.message || 'Login failed', 'error');
             }
@@ -398,10 +408,80 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (elements.totalTransactions) elements.totalTransactions.textContent = data.totalTransactions;
                 if (elements.pendingTransactions) elements.pendingTransactions.textContent = data.pendingTransactions;
                 if (elements.totalVolume) elements.totalVolume.textContent = `$${data.totalVolume.toLocaleString()}`;
+                
+                // Update fast trading status
+                fastTradingEnabled = data.fastTradingEnabled || false;
+                updateFastTradingButton();
             }
         } catch (err) {
             console.error('Error loading dashboard data:', err);
             showNotification('Failed to load dashboard data', 'error');
+        }
+    }
+
+    async function loadFastTradingStatus() {
+        try {
+            const response = await apiRequest('/api/admin/settings/fast-trading');
+            
+            if (response && response.ok) {
+                const data = await response.json();
+                fastTradingEnabled = data.enabled;
+                updateFastTradingButton();
+            }
+        } catch (err) {
+            console.error('Error loading fast trading status:', err);
+            showNotification('Failed to load fast trading status', 'error');
+        }
+    }
+
+    function updateFastTradingButton() {
+        if (elements.toggleFastTradingBtn) {
+            if (fastTradingEnabled) {
+                elements.toggleFastTradingBtn.innerHTML = '<i class="fas fa-toggle-on mr-2"></i> Disable Fast Trading';
+                elements.toggleFastTradingBtn.classList.remove('bg-green-600');
+                elements.toggleFastTradingBtn.classList.add('bg-red-600');
+            } else {
+                elements.toggleFastTradingBtn.innerHTML = '<i class="fas fa-toggle-off mr-2"></i> Enable Fast Trading';
+                elements.toggleFastTradingBtn.classList.remove('bg-red-600');
+                elements.toggleFastTradingBtn.classList.add('bg-green-600');
+            }
+        }
+        
+        if (elements.fastTradingStatus) {
+            elements.fastTradingStatus.textContent = fastTradingEnabled ? 'Enabled' : 'Disabled';
+            elements.fastTradingStatus.className = fastTradingEnabled ? 'text-green-500' : 'text-red-500';
+        }
+    }
+
+    async function toggleFastTrading() {
+        if (elements.toggleFastTradingBtn) {
+            elements.toggleFastTradingBtn.disabled = true;
+            elements.toggleFastTradingBtn.innerHTML = '<div class="loading"></div> Updating...';
+        }
+        
+        try {
+            const newStatus = !fastTradingEnabled;
+            const response = await apiRequest('/api/admin/settings/fast-trading', {
+                method: 'PUT',
+                body: JSON.stringify({ enabled: newStatus })
+            });
+            
+            if (response && response.ok) {
+                fastTradingEnabled = newStatus;
+                updateFastTradingButton();
+                showNotification(`Fast trading ${newStatus ? 'enabled' : 'disabled'} successfully!`, 'success');
+            } else {
+                const errorData = await response.json();
+                showNotification(errorData.message || 'Failed to update fast trading setting', 'error');
+            }
+        } catch (err) {
+            console.error('Error toggling fast trading:', err);
+            showNotification('Failed to update fast trading setting', 'error');
+        } finally {
+            if (elements.toggleFastTradingBtn) {
+                elements.toggleFastTradingBtn.disabled = false;
+                updateFastTradingButton();
+            }
         }
     }
 
@@ -415,7 +495,8 @@ document.addEventListener('DOMContentLoaded', function() {
             await Promise.all([
                 loadDashboardData(),
                 loadUsers(),
-                loadTransactions()
+                loadTransactions(),
+                loadFastTradingStatus() // Also refresh fast trading status
             ]);
             
             showNotification('Data refreshed successfully!', 'success');

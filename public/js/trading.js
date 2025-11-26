@@ -1,6 +1,6 @@
 
         // API Base URL
-        const API_BASE = 'https://fly-io-haha.onrender.com/';
+        const API_BASE = 'https://forexproo.onrender.com/';
         
         // Check if user is logged in
         let token = localStorage.getItem('token');
